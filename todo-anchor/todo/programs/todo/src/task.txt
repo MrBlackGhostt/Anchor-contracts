@@ -1,0 +1,18 @@
+Level 1: Defining the Data
+The foundation of a Todo app is the data structure. You define what a “Todo” looks like using the  #account  attribute, which handles serialization for you .
+	•	Struct Fields: Typically includes the  author  (PubKey),  title  (String), and  is_done  (bool).
+	•	Space Calculation: You must pre-calculate the size (8 bytes for Anchor’s discriminator + data size) .
+	•	Example:  8 (discriminator) + 32 (author) + 4 (string prefix) + 50 (max title length) + 1 (bool)  .
+Level 2: Creating and PDAs
+To create a Todo, you use a PDA as a unique ID. A common “20/80” pattern is using the user’s wallet address and a static string like  "todo"  as seeds .
+	•	The  init  Constraint: This creates the account on-chain.
+	•	Seeds:  seeds = b"todo", user.key().as_ref()  ensures each user can have a unique todo account tied to their wallet .
+	•	Payer: You specify who pays the “rent” for the account storage .
+Level 3: Update and Realloc
+Updating data requires the  mut  (mutable) attribute. If a user changes their todo description and it becomes longer, you must use realloc to expand the account’s space .
+	•	Realloc Syntax:  realloc = 8 + new_size, realloc::payer = user, realloc::zero = true  .
+	•	Logic: The program logic simply overwrites the struct fields in the instruction function, and Anchor saves the state at the end .
+Level 4: Closing (Delete)
+Deleting an account in Solana means reclaiming the SOL deposited for rent. Anchor provides a secure  close  constraint for this .
+	•	The  close  Constraint:  #account(mut, close = user)  will transfer all SOL from the Todo account to the user’s wallet and mark the account as closed .
+	•	Security: Anchor automatically clears the data and sets a “closed” discriminator to prevent “revival attacks” where someone might try to reuse the old data 
