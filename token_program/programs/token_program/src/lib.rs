@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::{token_interface::{self,Mint, TokenInterface, TokenAccount,MintTo}};
+use anchor_spl::{token_interface::{self,Mint, TokenInterface, TokenAccount,MintTo, TransferChecked}};
 
 //TODO write the instruction for the TransferToken
 //anchor_spl provide code which is compatible types for working with both token programs
@@ -9,6 +9,7 @@ declare_id!("EPTmSLWCpkChWxm4mpRHvRkSfagrF3M6c77qUTmLVsiL");
 
 #[program]
 pub mod token_program {
+
     use super::*;
     pub fn create_mint(ctx: Context<CreateMint>) -> Result<()> {
         msg!("Greetings from: {:?}", ctx.accounts.mint);
@@ -32,6 +33,21 @@ pub mod token_program {
         token_interface::mint_to(cpi_content, amount)?;
 
         Ok(())
+    }
+    pub fn transfer_token(ctx: Context<TransferToken>, amount:u64) -> Result<()>{
+        let decimal = ctx.accounts.mint.decimals;
+
+        let cpi_account = TransferChecked{ 
+            mint:ctx.accounts.mint.to_account_info(),
+            from: ctx.accounts.from_token_account.to_account_info(),
+            to:ctx.accounts.to_account.to_account_info(),
+            authority: ctx.accounts.user.to_account_info()
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_context =  CpiContext::new(cpi_program, cpi_account) ;
+        token_interface::transfer_checked(cpi_context, amount, decimal)?;
+        Ok(())
+
     }
 }
 
