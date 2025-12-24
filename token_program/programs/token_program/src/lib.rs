@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::{token_interface::{self,Mint, TokenInterface, TokenAccount,MintTo, TransferChecked}};
+use anchor_spl::token_interface::{self,Mint, TokenInterface, TokenAccount,MintTo, TransferChecked};
 
 //TODO write the instruction for the TransferToken
 //anchor_spl provide code which is compatible types for working with both token programs
@@ -55,12 +55,12 @@ pub mod token_program {
 pub struct Initialize {}
 
 #[derive(Accounts)]
-pub  struct CreateMint <'info>{
+pub struct CreateMint <'info>{
       #[account(mut)] 
     pub user: Signer<'info>,
     #[account(
         init,
-        payer  = user,
+        payer = user,
         mint::decimals = 6, 
         mint::authority = user.key(),
         mint::freeze_authority = user.key()
@@ -69,11 +69,7 @@ pub  struct CreateMint <'info>{
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>
 }
-
-#[derive(Accounts)]
-pub struct CreateTokenAccount<'info>{
-    #[account(mut)]
-pub user:Signer<'info>,
+#[derive(Accounts)] pub struct CreateTokenAccount<'info>{ #[account(mut)] pub user:Signer<'info>,
     #[account(init,
         payer= user,
         associated_token::mint= mint, 
@@ -106,6 +102,7 @@ pub struct TransferToken <'info>{
     pub from_token_account: InterfaceAccount<'info, TokenAccount>,
     #[account(mut)]
     pub to_account: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut)]
     pub mint: InterfaceAccount<'info, Mint>,
     pub token_program: Interface<'info,TokenInterface>,
 
