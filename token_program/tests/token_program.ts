@@ -25,25 +25,30 @@ describe("token_program", () => {
   console.log(`MINT publicKey - ${mint.publicKey}`);
   console.log(`TOKEN_PROGRAM_ID - ${TOKEN_PROGRAM_ID}`);
 
+  const getATAAdress = async (key) => {
+    const address = getAssociatedTokenAddressSync(mint.publicKey, key);
+    return address;
+  };
+
   before(
     //put some sol into the user by airdrop
     async () => {
       const airdrop = await provider.connection.requestAirdrop(
         user.publicKey,
-        2 * anchor.web3.LAMPORTS_PER_SOL
+        5 * anchor.web3.LAMPORTS_PER_SOL
       );
       await provider.connection.confirmTransaction(airdrop, "confirmed");
+      const airdropReceiver = await provider.connection.requestAirdrop(
+        receiver.publicKey,
+        3 * anchor.web3.LAMPORTS_PER_SOL
+      );
+      await provider.connection.confirmTransaction(
+        airdropReceiver,
+        "confirmed"
+      );
     }
   );
 
-  const seeds = Buffer.from("ata");
-
-  const derivePda = () => {
-    return anchor.web3.PublicKey.createProgramAddressSync(
-      [seeds, user.publicKey.toBuffer(), mint.publicKey.toBuffer()],
-      TOKEN_PROGRAM_ID
-    );
-  };
   it("Is initialized!", async () => {
     //Creating the mint account
     const tx = await program.methods
@@ -82,14 +87,14 @@ describe("token_program", () => {
     // ✅ Derive the ATA AFTER creation to verify
     const tokenAccount = getAssociatedTokenAddressSync(
       mint.publicKey,
-      user.publicKey,
-      false,
-      TOKEN_PROGRAM_ID
+      user.publicKey
+      // false,
+      // TOKEN_PROGRAM_ID
     );
 
     console.log(`✅ ATA was created at: ${tokenAccount.toString()}`);
 
-    // ✅ VERIFY IT EXISTS
+    // ✅ VERIFY IT EISTS
     const accountInfo = await provider.connection.getAccountInfo(tokenAccount);
     assert.ok(accountInfo, "Token account should exist");
     assert.equal(
@@ -99,5 +104,78 @@ describe("token_program", () => {
     );
 
     console.log(`✅ ATA verified - Owner: ${accountInfo.owner.toString()}`);
+  });
+
+  it("Minting the token", async () => {
+    // Get the  tokenAccount (ATA)
+    const tokenATA = await getAssociatedTokenAddressSync(
+      mint.publicKey,
+      user.publicKey
+    );
+    console.log(`Mint TokenATA:- ${tokenATA}`);
+
+    const tokenAccount = await provider.connection.getAccountInfo(tokenATA);
+    console.log(`The tokenAccount info  ${tokenAccount}`);
+    const amount = new anchor.BN(110000);
+    // why we have to do it????????
+    //
+    //
+    const inx = await program.methods
+      .mintToken(amount)
+      .accounts({
+        user: user.publicKey,
+        mint: mint.publicKey,
+        tokenAccount: tokenATA,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log(`the mint token ${inx}`);
+    const signature = await provider.connection.confirmTransaction(inx);
+
+    console.log(`The signature of the mint token is :${signature}`);
+
+    const tokenAccount1 = await provider.connection.getTokenAccountBalance(
+      tokenATA
+    );
+    console.log(`tokenAccount lamports :${tokenAccount1}}`);
+    assert.equal(parseInt(tokenAccount1.value.amount), 110000);
+  });
+
+  //Test for transfer
+  it("Trasfer the token ", async () => {
+    const amount = new anchor.BN(80000);
+    const userATA = await getATAAdress(user.publicKey);
+
+    // The ata of receiver
+    const createReceiverATA = await program.methods
+      .createTokenAccount()
+      .accounts({
+        user: receiver.publicKey,
+        mint: mint.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([receiver])
+      .rpc();
+
+    const receiverATA = await getATAAdress(receiver.publicKey);
+    const inx = await program.methods
+      .transferToken(amount)
+      .accounts({
+        user: user.publicKey,
+        fromTokenAccount: userATA,
+        toAccount: receiverATA,
+        mint: mint.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([user])
+      .rpc();
+
+    const signature = await provider.connection.confirmTransaction(inx);
+
+    const ata = await provider.connection.getTokenAccountBalance(userATA);
+
+    assert.equal(parseInt(ata.value.amount), 110000 - 80000);
   });
 });

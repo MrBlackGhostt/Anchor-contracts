@@ -90,7 +90,7 @@ pub struct MintToken <'info>{
     #[account(mut)]
     pub mint: InterfaceAccount<'info, Mint>,
 #[account(mut)]
-    pub token_account: InterfaceAccount<'info, TokenAccount>,
+    pub token_account: InterfaceAccount<'info, TokenAccount>, // ATA Address we created 
     pub token_program: Interface<'info, TokenInterface>
 }
 
