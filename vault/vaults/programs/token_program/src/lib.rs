@@ -4,13 +4,13 @@ use anchor_spl::token_interface::{
     self, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked,
 };
 
-declare_id!("11111111111111111111111111111111");
+declare_id!("BZLiJ62bzRryYp9mRobz47uA66WDgtfTXhhgM25tJyx5");
 
 #[program]
 pub mod token_program {
 
     use super::*;
-    pub fn create_mint(ctx: Context<CreateMint>) -> Result<(())> {
+    pub fn create_mint(ctx: Context<CreateMint>) -> Result<()> {
         msg!("Going to create the mint");
         Ok(())
     }
@@ -62,6 +62,7 @@ pub struct CreateMint<'info> {
     signer: Signer<'info>,
     #[account(init, payer= signer,
     mint::decimals = 1,
+        
     mint::authority = signer.key(),
     mint::freeze_authority = signer.key()
     )]
@@ -79,7 +80,7 @@ pub struct CreateTokenAccount<'info> {
     #[account(init, payer= signer,
     associated_token::mint= mint,
     associated_token::authority = signer,
-    associated_token::token_program= token_program
+        associated_token::token_program= token_program
     )]
     pub token_account: InterfaceAccount<'info, TokenAccount>,
     pub mint: InterfaceAccount<'info, Mint>,
@@ -94,9 +95,15 @@ pub struct MintToken<'info> {
     signer: Signer<'info>,
     #[account(mut)]
     pub mint: InterfaceAccount<'info, Mint>,
-    #[account(mut)]
+      #[account(
+        init_if_needed,
+        payer = signer,
+        associated_token::mint = mint,
+        associated_token::authority = signer
+    )]
     pub token_account: InterfaceAccount<'info, TokenAccount>,
     pub token_program: Interface<'info, TokenInterface>,
+    pub system_program: Program<'info, System>
 }
 
 #[derive(Accounts)]

@@ -6,8 +6,8 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-valut = "22222222222222222222222222222222222222222222"
-token_program = "22222222222222222222222222222222222222221234"
+valut = "BZLiJ62bzRryYp9mRobz47uA66WDgtfTXhhgM25tJyx4"
+token_program = "BZLiJ62bzRryYp9mRobz47uA66WDgtfTXhhgM25tJyx5"
 
 [registry]
 url = "https://api.apr.dev"

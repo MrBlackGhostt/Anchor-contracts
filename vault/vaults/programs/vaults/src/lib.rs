@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenInterface, TokenAccount,TransferChecked };
 use anchor_spl::associated_token::AssociatedToken;
 use token_program::program::TokenProgram;
-declare_id!("22222222222222222222222222222222222222222222");
+declare_id!("BZLiJ62bzRryYp9mRobz47uA66WDgtfTXhhgM25tJyx4");
 
 #[program]
 pub mod valut {
@@ -38,7 +38,8 @@ pub fn transfer_token(ctx:Context<TransferToken>) -> Result<()>{
     pub fn withdraw(ctx: Context<WithDraw>, amount: u64 ) -> Result<()>{
         
     require_gt!(ctx.accounts.vault_token_ata.amount, 0,VaultError::InvalidAmount); 
-    require_gte!( ctx.accounts.vault_token_ata.amount,0, VaultError::InvalidAmount);
+    require_gte!( ctx.accounts.vault_token_ata.amount,amount, VaultError::InvalidAmount);
+
 
     let signer_key = ctx.accounts.signer.key();
     let account_from = ctx.accounts.vault_token_ata.to_account_info();
@@ -81,6 +82,7 @@ pub struct CreateVaultPda <'info>{
     pub signer: Signer<'info>,
     #[account( seeds=[b"vault", signer.key().as_ref()], bump)]
      vault_pda: SystemAccount<'info>,
+    system_program: Program<'info, System>
 }
 
 
