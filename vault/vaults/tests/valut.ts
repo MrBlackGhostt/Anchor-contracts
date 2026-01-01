@@ -17,6 +17,8 @@ describe("vault", () => {
   const programToken = anchor.workspace.token_program as Program<TokenProgram>;
   const user = anchor.web3.Keypair.generate();
 
+  console.log(user.publicKey);
+
   const mint = anchor.web3.Keypair.generate();
 
   let vaultAddress: anchor.web3.PublicKey;
@@ -99,7 +101,6 @@ describe("vault", () => {
       .accounts({
         signer: user.publicKey,
         mint: mint.publicKey,
-        tokenAccount: userTokenAta,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .signers([user])
@@ -110,9 +111,16 @@ describe("vault", () => {
     if (!signature)
       throw new Error("The mint 100 token to user is not successfull");
 
-    const userAtaBalance = await provider.connection.getBalance(userTokenAta);
+    const userAta = await getAssociatedTokenAddressSync(
+      mint.publicKey,
+      user.publicKey
+    );
 
-    assert.equal(userAtaBalance, 100);
+    const userAtaBalance = await provider.connection.getTokenAccountBalance(
+      userAta
+    );
+
+    assert.equal(userAtaBalance.value.amount, "100");
   });
 
   //Create User Valut create_valut_pda
@@ -130,10 +138,7 @@ describe("vault", () => {
     if (!signature)
       throw new Error("Create pda for the user in the valut failed");
 
-    const vaultPdaAccount = await provider.connection.getAccountInfo(
-      vaultAddress
-    );
-
-    assert.equal(vaultPdaAccount.owner, user.publicKey);
+    const vaultData = await provider.connection.getAccountInfo(vaultAddress);
+    assert.equal(vaultData.owner.toString(), programVault.programId.toString());
   });
 });

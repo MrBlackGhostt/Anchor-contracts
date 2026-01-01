@@ -4,7 +4,7 @@ use anchor_spl::token_interface::{
     self, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked,
 };
 
-declare_id!("BZLiJ62bzRryYp9mRobz47uA66WDgtfTXhhgM25tJyx5");
+declare_id!("9MGfDMfR7TbnQD27zxsssusAwkYLPQRGt7sR8ett8QFP");
 
 #[program]
 pub mod token_program {
@@ -38,7 +38,8 @@ pub mod token_program {
 
         let cpi_context = CpiContext::new(program, cpi_account);
 
-        token_interface::mint_to(cpi_context, amount)
+        token_interface::mint_to(cpi_context, amount)?;
+        Ok(())
     }
     pub fn transfer_token(ctx: Context<TransferToken>, amount: u64) -> Result<()> {
         let cpi_accounts = TransferChecked {
@@ -99,9 +100,11 @@ pub struct MintToken<'info> {
         init_if_needed,
         payer = signer,
         associated_token::mint = mint,
-        associated_token::authority = signer
+        associated_token::authority = signer,
+        associated_token::token_program = token_program
     )]
     pub token_account: InterfaceAccount<'info, TokenAccount>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>
 }
@@ -111,9 +114,16 @@ pub struct TransferToken<'info> {
     #[account(mut)]
     signer: Signer<'info>,
     pub mint: InterfaceAccount<'info, Mint>,
-    #[account(mut)]
+    #[account(mut,
+    associated_token::mint = mint,
+    associated_token::authority = signer,
+    associated_token:: token_program = token_program)]
     pub token_account: InterfaceAccount<'info, TokenAccount>, //token-interface::transferChecked
-    #[account(mut)]
+    #[account( init_if_needed,payer=signer, associated_token::mint = mint,
+    associated_token::authority = signer,
+    associated_token:: token_program = token_program )]
     pub to_token_account: InterfaceAccount<'info, TokenAccount>,
+     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
+    pub system_program: Program<'info, System>
 }

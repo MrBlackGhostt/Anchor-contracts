@@ -2,7 +2,9 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenInterface, TokenAccount,TransferChecked };
 use anchor_spl::associated_token::AssociatedToken;
 use token_program::program::TokenProgram;
-declare_id!("BZLiJ62bzRryYp9mRobz47uA66WDgtfTXhhgM25tJyx4");
+
+
+declare_id!("7zWbJyToagqhZMuYELVF761c7HgCmcT8k9HzUn48H55Z");
 
 #[program]
 pub mod valut {
@@ -11,6 +13,7 @@ pub mod valut {
 
 pub fn create_valut_pda(ctx:Context<CreateVaultPda>) ->         Result<()>{
         msg!("Create the vault pda");
+    
 Ok(())
     }
 // Create the pda for the vault and transfer_token form user_pda to vault pda 
@@ -80,9 +83,16 @@ let authority = account_from.clone();
 pub struct CreateVaultPda <'info>{
     #[account(mut)]
     pub signer: Signer<'info>,
-    #[account( seeds=[b"vault", signer.key().as_ref()], bump)]
-     vault_pda: SystemAccount<'info>,
+    #[account(init,payer=signer, space=8 + VaultAccount::INIT_SPACE , seeds=[b"vault", signer.key().as_ref()], bump)]
+    vault_pda:Account<'info, VaultAccount>,
     system_program: Program<'info, System>
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct VaultAccount {
+    pub owner: Pubkey,      // 32 bytes
+    pub bump: u8,           // 1 byte
 }
 
 
