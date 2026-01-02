@@ -83,7 +83,7 @@ let authority = account_from.clone();
 pub struct CreateVaultPda <'info>{
     #[account(mut)]
     pub signer: Signer<'info>,
-    #[account(init,payer=signer, space=8 + VaultAccount::INIT_SPACE , seeds=[b"vault", signer.key().as_ref()], bump)]
+    #[account(init_if_needed,payer=signer, space=8 + VaultAccount::INIT_SPACE , seeds=[b"vault", signer.key().as_ref()], bump)]
     vault_pda:Account<'info, VaultAccount>,
     system_program: Program<'info, System>
 }
@@ -102,7 +102,7 @@ pub struct TransferToken<'info>{
     pub signer: Signer<'info>,
     // Vault user pda
     #[account(mut, seeds=[b"vault", signer.key().as_ref()], bump)]
-    pub vault_pda: SystemAccount<'info>, // is not the pda account owner now the program check did i
+    pub vault_pda: Account<'info, VaultAccount>, // is not the pda account owner now the program check did i
     
     // pass the user ATA account 
     #[account(mut)]

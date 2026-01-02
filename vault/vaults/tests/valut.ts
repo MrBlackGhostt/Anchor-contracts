@@ -8,37 +8,45 @@ import {
   getAssociatedTokenAddressSync,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { SYSTEM_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/native/system";
+import {
+  program,
+  SYSTEM_PROGRAM_ID,
+} from "@coral-xyz/anchor/dist/cjs/native/system";
 
 describe("vault", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
   const programVault = anchor.workspace.valut as Program<Valut>;
   const programToken = anchor.workspace.token_program as Program<TokenProgram>;
-  const user = anchor.web3.Keypair.generate();
+  const user = (provider.wallet as anchor.Wallet).payer;
 
   console.log(user.publicKey);
 
   const mint = anchor.web3.Keypair.generate();
 
-  let vaultAddress: anchor.web3.PublicKey;
+  let vaultPdaAddress: anchor.web3.PublicKey;
 
+  let valutPdaATA: anchor.web3.PublicKey;
   //user token ata
   const userTokenAta = getAssociatedTokenAddressSync(
-    programToken.programId,
+    mint.publicKey,
     user.publicKey
   );
-
   before(async () => {
     //Airtdrop 5 sol to the user
-    await provider.connection.confirmTransaction(
-      await provider.connection.requestAirdrop(
-        user.publicKey,
-        5 * anchor.web3.LAMPORTS_PER_SOL
-      )
-    );
+    //
+    // const sig = await provider.connection.requestAirdrop(
+    //   user.publicKey,
+    //   1 * anchor.web3.LAMPORTS_PER_SOL
+    // );
+    //
+    // const latest = await provider.connection.getLatestBlockhash();
+    // await provider.connection.confirmTransaction({
+    //   signature: sig,
+    //   ...latest,
+    // });
 
-    [vaultAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+    [vaultPdaAddress] = anchor.web3.PublicKey.findProgramAddressSync(
       [Buffer.from("vault"), user.publicKey.toBuffer()],
       programVault.programId
     );
@@ -85,11 +93,13 @@ describe("vault", () => {
     const signature = await provider.connection.confirmTransaction(ixn);
     if (!signature) throw new Error("Withdraw transaction is failes");
 
-    const userAtaBalance = await provider.connection.getBalance(userTokenAta);
+    const userAtaBalance = await provider.connection.getTokenAccountBalance(
+      userTokenAta
+    );
 
     const userBalance = await provider.connection.getBalance(user.publicKey);
 
-    assert.equal(userAtaBalance, 0);
+    assert.equal(userAtaBalance.value.amount, "0");
   });
 
   //Mint Token To user ATA
@@ -138,7 +148,46 @@ describe("vault", () => {
     if (!signature)
       throw new Error("Create pda for the user in the valut failed");
 
-    const vaultData = await provider.connection.getAccountInfo(vaultAddress);
+    const vaultData = await provider.connection.getAccountInfo(vaultPdaAddress);
     assert.equal(vaultData.owner.toString(), programVault.programId.toString());
+  });
+
+  it("Create vaultPda ATA", async () => {
+    const [vaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("vault"), user.publicKey.toBuffer()],
+      programVault.programId
+    );
+
+    const vaultTokenAccount = getAssociatedTokenAddressSync(
+      mint.publicKey,
+      vaultPda,
+      true // PDA owner
+    );
+    //create the ata and transferToken
+    const txn = await programVault.methods
+      .transferToken()
+      .accounts({
+        signer: user.publicKey,
+        userTokenAccount: userTokenAta,
+        mintAccount: mint.publicKey,
+      })
+      .signers([user])
+      .rpc();
+
+    const signature = await provider.connection.confirmTransaction(txn);
+
+    if (!signature) throw new Error("Transacton not successful");
+
+    const vaultAta = getAssociatedTokenAddressSync(
+      mint.publicKey,
+      vaultPda,
+      true
+    );
+    // const bal = await provider.connection.getTokenAccountBalance(vaultAta);
+    // console.log(bal.value.amount);
+
+    //assert.equal(userTokenBalance, bal);
+    const valuAtaInfo = await provider.connection.getAccountInfo(vaultAta);
+    assert.equal(valuAtaInfo.owner, vaultPda);
   });
 });
