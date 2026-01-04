@@ -17,24 +17,24 @@ pub fn create_valut_pda(ctx:Context<CreateVaultPda>) ->         Result<()>{
 Ok(())
     }
 // Create the pda for the vault and transfer_token form user_pda to vault pda 
-pub fn transfer_token(ctx:Context<TransferToken>) -> Result<()>{
-    // The Ata is already create in the struct of accounts 
-    let token_program = ctx.accounts.mint_account.to_account_info();
-    // The Accounts needed for the TransferToken
-    let accounts_for_ata = TransferChecked{
-            mint: ctx.accounts.mint_account.to_account_info(),
-            from:ctx.accounts.user_token_account.to_account_info(),
-            authority: ctx.accounts.user_token_account.to_account_info(),
-            to: ctx.accounts.vault_token_account.to_account_info(),
-        }; 
+pub fn transfer_token(ctx: Context<TransferToken>) -> Result<()> {
+    let cpi_program = ctx.accounts.token_program.to_account_info(); // ✅
 
-        let transfer_context = CpiContext::new(token_program, accounts_for_ata);
-        
-        let decimal =        ctx.accounts.mint_account.decimals;
-        let amount  = ctx.accounts.user_token_account.amount;
-        token_interface::transfer_checked(transfer_context, amount,decimal)?;
-         Ok(())
-    }
+    let accounts_for_ata = TransferChecked {
+        mint: ctx.accounts.mint_account.to_account_info(),
+        from: ctx.accounts.user_token_account.to_account_info(),
+        authority: ctx.accounts.signer.to_account_info(),          // ✅ user is owner of `user_token_account`
+        to: ctx.accounts.vault_token_account.to_account_info(),
+    };
+
+    let cpi_ctx = CpiContext::new(cpi_program, accounts_for_ata);
+
+    let decimals = ctx.accounts.mint_account.decimals;
+    let amount   = ctx.accounts.user_token_account.amount;
+
+    token_interface::transfer_checked(cpi_ctx, amount, decimals)?;
+    Ok(())
+}
 
 
     // WithDraw token from valut ata to user ata
@@ -97,28 +97,39 @@ pub struct VaultAccount {
 
 
 #[derive(Accounts)]
-pub struct TransferToken<'info>{
+pub struct TransferToken<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
-    // Vault user pda
-    #[account(mut, seeds=[b"vault", signer.key().as_ref()], bump)]
-    pub vault_pda: Account<'info, VaultAccount>, // is not the pda account owner now the program check did i
-    
-    // pass the user ATA account 
-    #[account(mut)]
+
+    #[account(
+        mut,
+        seeds = [b"vault", signer.key().as_ref()],
+        bump
+    )]
+    pub vault_pda: Account<'info, VaultAccount>,
+
+    #[account(
+        mut,
+        token::mint = mint_account,
+        token::authority = signer,
+    )]
     pub user_token_account: InterfaceAccount<'info, TokenAccount>,
 
-    // Create the valut ata 
-    #[account(init, payer= signer, 
-    associated_token::mint = mint_account,
-    associated_token::authority= vault_pda,
-    associated_token::token_program= token_program)]
+    #[account(
+        init_if_needed,
+        payer = signer,
+        associated_token::mint = mint_account,
+        associated_token::authority = signer,
+        associated_token::token_program = token_program,
+    )]
     pub vault_token_account: InterfaceAccount<'info, TokenAccount>,
+
     pub mint_account: InterfaceAccount<'info, Mint>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
-    pub system_program: Program<'info, System>
+    pub system_program: Program<'info, System>,
 }
+
 
 
 //withdraw struct

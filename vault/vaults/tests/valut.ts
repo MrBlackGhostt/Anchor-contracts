@@ -152,24 +152,29 @@ describe("vault", () => {
     assert.equal(vaultData.owner.toString(), programVault.programId.toString());
   });
 
-  it("Create vaultPda ATA", async () => {
+  it("Create vaultPda Token ATA Transfer", async () => {
     const [vaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
       [Buffer.from("vault"), user.publicKey.toBuffer()],
       programVault.programId
     );
 
     const vaultTokenAccount = getAssociatedTokenAddressSync(
-      mint.publicKey,
-      vaultPda,
-      true // PDA owner
+      mint.publicKey, // mint
+      vaultPda, // owner (PDA)
+      true // allowOwnerOffCurve = true, because PDA
     );
+
     //create the ata and transferToken
     const txn = await programVault.methods
       .transferToken()
-      .accounts({
+      .accountsPartial({
         signer: user.publicKey,
+        vaultPda,
         userTokenAccount: userTokenAta,
+        vaultTokenAccount,
         mintAccount: mint.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID, // spl-token program
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .signers([user])
       .rpc();
@@ -189,5 +194,36 @@ describe("vault", () => {
     //assert.equal(userTokenBalance, bal);
     const valuAtaInfo = await provider.connection.getAccountInfo(vaultAta);
     assert.equal(valuAtaInfo.owner, vaultPda);
+  });
+
+  it("withdraw", async () => {
+    const [vaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("vault"), user.publicKey.toBuffer()],
+      programVault.programId
+    );
+    const amount = new anchor.BN(100);
+
+    const tx = await programVault.methods
+      .withdraw(amount)
+      .accounts({
+        signer: user.publicKey,
+        vaultTokenAta: valutPdaATA,
+        mintAccount: mint.publicKey,
+        userTokenAta: userTokenAta,
+      })
+      .signers([user])
+      .rpc();
+
+    const signature = await provider.connection.confirmTransaction(tx);
+
+    const userTokenBalance = await provider.connection.getTokenAccountBalance(
+      userTokenAta
+    );
+
+    assert.equal(userTokenBalance.value.amount, "100");
+
+    const vaultTokenAccountBalane =
+      await provider.connection.getTokenAccountBalance(valutPdaATA);
+    assert.equal(vaultTokenAccountBalane.value.amount, "O");
   });
 });

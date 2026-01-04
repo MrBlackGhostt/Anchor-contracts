@@ -1,0 +1,9 @@
+/Users/mrblackghost/Documents/practice/Anchor_Contract/vault/vaults/target/sbpf-solana-solana/release/deps/libsolana_invoke-7cbd24ce69167dde.rmeta: /Users/mrblackghost/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-invoke-0.4.0/src/lib.rs /Users/mrblackghost/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-invoke-0.4.0/src/stable_instruction_borrowed.rs /Users/mrblackghost/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-invoke-0.4.0/src/../README.md
+
+/Users/mrblackghost/Documents/practice/Anchor_Contract/vault/vaults/target/sbpf-solana-solana/release/deps/libsolana_invoke-7cbd24ce69167dde.rlib: /Users/mrblackghost/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-invoke-0.4.0/src/lib.rs /Users/mrblackghost/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-invoke-0.4.0/src/stable_instruction_borrowed.rs /Users/mrblackghost/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-invoke-0.4.0/src/../README.md
+
+/Users/mrblackghost/Documents/practice/Anchor_Contract/vault/vaults/target/sbpf-solana-solana/release/deps/solana_invoke-7cbd24ce69167dde.d: /Users/mrblackghost/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-invoke-0.4.0/src/lib.rs /Users/mrblackghost/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-invoke-0.4.0/src/stable_instruction_borrowed.rs /Users/mrblackghost/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-invoke-0.4.0/src/../README.md
+
+/Users/mrblackghost/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-invoke-0.4.0/src/lib.rs:
+/Users/mrblackghost/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-invoke-0.4.0/src/stable_instruction_borrowed.rs:
+/Users/mrblackghost/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-invoke-0.4.0/src/../README.md:

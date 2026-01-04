@@ -1,0 +1,1 @@
+/Users/mrblackghost/Documents/practice/Anchor_Contract/vault/vaults/target/sbpf-solana-solana/release/libtoken_program.rlib: /Users/mrblackghost/Documents/practice/Anchor_Contract/vault/vaults/programs/token_program/src/lib.rs
