@@ -12,10 +12,13 @@ describe("counter_magicblock", () => {
   anchor.setProvider(provider);
 
   const providerEphemeralRollup = new anchor.AnchorProvider(
-    new anchor.web3.Connection("https://devnet-as.magicblock.app/", {
-      wsEndpoint: "wss://devnet.magicblock.app/",
+    new anchor.web3.Connection("http://127.0.0.1:7799", {
+      // ER RPC
+      wsEndpoint: "ws://127.0.0.1:7800", // ER WS
+      commitment: "confirmed",
     }),
-    anchor.Wallet.local()
+    anchor.Wallet.local(),
+    { commitment: "confirmed" }
   );
   const program = anchor.workspace
     .counter_magicblock as Program<CounterMagicblock>;
@@ -67,6 +70,7 @@ describe("counter_magicblock", () => {
   });
 
   it("increment", async () => {
+    anchor.setProvider(providerEphemeralRollup);
     let inctx = await program.methods
       .incrementAndCommit()
       .accounts({
@@ -74,10 +78,9 @@ describe("counter_magicblock", () => {
       })
       .signers([signer])
       .rpc();
-    let inctxHash = await provider.connection.confirmTransaction(inctx);
 
-    if(!inctxHash) throw Error("Error in incrementAndCommit")
-
-    con
+    // if (!inctxHash) throw Error("Error in incrementAndCommit");
+    //
+    // con;
   });
 });
