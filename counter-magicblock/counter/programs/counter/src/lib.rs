@@ -4,13 +4,13 @@ use ephemeral_rollups_sdk::{
     anchor::{delegate, ephemeral},
     cpi::DelegateConfig,
 };
-declare_id!("E7WPtFwx4ZYntrUK1H2VF4ncV32jFpsZPLTSQwiWxHQ2");
+declare_id!("HEs7dPwbM38d9hgDVzdx1fXExgogRsWZYGJefPMN8JXf");
 
 const TEST_SEED: &[u8] = b"count";
 
 #[ephemeral]
 #[program]
-pub mod counter {
+pub mod counter_magicblock {
 
     use super::*;
 
@@ -26,19 +26,22 @@ pub mod counter {
     /// Delegate the account to the delegation program
     /// Set specific validator based on ER, see https://docs.magicblock.gg/pages/get-started/how-integrate-your-program/local-setup
     pub fn delegate(ctx: Context<DelegateInput>) -> Result<()> {
-        ctx.accounts.delegate()
+        ctx.accounts.delegate()?;
+        Ok(())
     }
 
     /// Increment the counter and manually commit the account in the Ephemeral Rollup session.
     pub fn increment_and_commit(ctx: Context<IncrementAndCommit>) -> Result<()> {
         // ...
-        ctx.accounts.increment()?;
-        ctx.accounts.commit_accounts() //CPI to ER  sdk
+        ctx.accounts.increment()?; // why we put the ? here did not the increment send OK at last v
+        ctx.accounts.commit_account()?; //CPI to ER  sdk
+        Ok(())
     }
 
     /// Undelegate the account from the delegation program
     pub fn undelegate(ctx: Context<IncrementAndCommit>) -> Result<()> {
-        ctx.accounts.exit_rollups()
+        ctx.accounts.exit_rollups()?;
+        Ok(())
     }
 }
 #[derive(Accounts)]
@@ -75,11 +78,14 @@ impl Increment<'_> {
 #[delegate]
 #[derive(Accounts)]
 pub struct DelegateInput<'info> {
+    #[account(mut)] // ✅ Also safe: payer mut validated by Signer
     pub payer: Signer<'info>,
-    //Check by the delegate program
+
+    /// CHECK: ER validator pubkey from MagicBlock local setup
     pub validator: Option<AccountInfo<'info>>,
-    //the pda to delegate
-    #[account(mut, del)] // this tell the program this account is eligibal for ownership transfer
+
+    /// CHECK: PDA derived from [TEST_SEED], validated by delegate_pda CPI
+    #[account(mut, del)]
     pub pda: AccountInfo<'info>,
 }
 
@@ -101,11 +107,14 @@ impl DelegateInput<'_> {
 pub struct IncrementAndCommit<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
+
     #[account(mut, seeds=[TEST_SEED], bump)]
     pub counter: Account<'info, Counter>,
-    //magic_context required by ER
+
+    /// CHECK: MagicBlock ER session context (validated by commit_accounts CPI)
     pub magic_context: AccountInfo<'info>,
-    //magic_program required by ER
+
+    /// CHECK: MagicBlock ER program account (fixed deployment address)
     pub magic_program: AccountInfo<'info>,
 }
 
@@ -114,7 +123,9 @@ impl IncrementAndCommit<'_> {
         self.counter.no += 1;
         Ok(())
     }
-    pub fn commit_accounts(&mut self) -> Result<()> {
+    pub fn commit_account(&mut self) -> Result<()> {
+        // why we give the mut the self where we
+        // updating the value
         commit_accounts(
             &self.payer,
             vec![&self.counter.to_account_info()],
@@ -124,9 +135,9 @@ impl IncrementAndCommit<'_> {
         Ok(())
     }
 
-    pub fn exit_rollups(&self) -> Result<()> {
+    pub fn exit_rollups(&mut self) -> Result<()> {
         commit_and_undelegate_accounts(
-            &self.payer,
+            &self.payer, // for the commit account and undelegate the payer has to pay the fee
             vec![&self.counter.to_account_info()],
             &self.magic_context,
             &self.magic_program,
