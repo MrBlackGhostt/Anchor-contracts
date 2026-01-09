@@ -15,14 +15,18 @@ pub mod counter_magicblock {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        let count = &mut ctx.accounts.counter;
+        let counter = &mut ctx.accounts.counter;
 
-        count.no = 0;
+        counter.no = 0;
 
-        msg!("Greetings from: {:?}", ctx.program_id);
+        msg!("PDA {} count: {}", counter.key(), counter.no);
         Ok(())
     }
 
+    pub fn commit(ctx: Context<IncrementAndCommit>) -> Result<()> {
+        ctx.accounts.commit()?;
+        Ok(())
+    }
     /// Delegate the account to the delegation program
     /// Set specific validator based on ER, see https://docs.magicblock.gg/pages/get-started/how-integrate-your-program/local-setup
     pub fn delegate(ctx: Context<DelegateInput>) -> Result<()> {
@@ -30,17 +34,28 @@ pub mod counter_magicblock {
         Ok(())
     }
 
+    ///Increment the counter
+    pub fn increment(ctx: Context<Increment>) -> Result<()> {
+        ctx.accounts.increment()?;
+        Ok(())
+    }
+
     /// Increment the counter and manually commit the account in the Ephemeral Rollup session.
     pub fn increment_and_commit(ctx: Context<IncrementAndCommit>) -> Result<()> {
         // ...
-        ctx.accounts.increment()?; // why we put the ? here did not the increment send OK at last v
-        ctx.accounts.commit_account()?; //CPI to ER  sdk
+        ctx.accounts.increment_and_commit()?; // why we put the ? here did not the increment send OK at last v
+        ctx.accounts.commit()?; //CPI to ER  sdk
+        Ok(())
+    }
+
+    pub fn increment_and_undelegate(ctx: Context<IncrementAndCommit>) -> Result<()> {
+        ctx.accounts.increment_and_undelegate()?;
         Ok(())
     }
 
     /// Undelegate the account from the delegation program
     pub fn undelegate(ctx: Context<IncrementAndCommit>) -> Result<()> {
-        ctx.accounts.exit_rollups()?;
+        ctx.accounts.undelegate()?;
         Ok(())
     }
 }
@@ -48,7 +63,7 @@ pub mod counter_magicblock {
 pub struct Initialize<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
-    #[account(init, payer=signer, seeds=[TEST_SEED], bump, space=8 + 8 )]
+    #[account(init_if_needed, payer=signer, seeds=[TEST_SEED], bump, space=8 + 8 )]
     pub counter: Account<'info, Counter>,
     system_program: Program<'info, System>,
 }
@@ -78,13 +93,13 @@ impl Increment<'_> {
 #[delegate]
 #[derive(Accounts)]
 pub struct DelegateInput<'info> {
-    #[account(mut)] // ✅ Also safe: payer mut validated by Signer
     pub payer: Signer<'info>,
-
-    /// CHECK: ER validator pubkey from MagicBlock local setup
+    //Check by the delegate program
+    //What is this checking exactly
     pub validator: Option<AccountInfo<'info>>,
-
-    /// CHECK: PDA derived from [TEST_SEED], validated by delegate_pda CPI
+    //the pda to delegate
+    // this tell the program this account is eligibal for ownership transfer
+    /// CHECK: PDA derived from seeds, validated by delegation CPI
     #[account(mut, del)]
     pub pda: AccountInfo<'info>,
 }
@@ -107,25 +122,36 @@ impl DelegateInput<'_> {
 pub struct IncrementAndCommit<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
-
-    #[account(mut, seeds=[TEST_SEED], bump)]
+    #[account(mut, seeds=[TEST_SEED], bump   )]
     pub counter: Account<'info, Counter>,
-
-    /// CHECK: MagicBlock ER session context (validated by commit_accounts CPI)
+    //magic_context required by ER
+    /// CHECK:` doc comment explaining why no checks through types are necessary
     pub magic_context: AccountInfo<'info>,
-
-    /// CHECK: MagicBlock ER program account (fixed deployment address)
+    //magic_program required by ER
+    /// CHECK:` doc comment explaining why no checks through types are necessary
     pub magic_program: AccountInfo<'info>,
 }
 
 impl IncrementAndCommit<'_> {
-    pub fn increment(&mut self) -> Result<()> {
+    ///Incremet the counter and manual commit the account in the ER.
+    pub fn increment_and_commit(&mut self) -> Result<()> {
         self.counter.no += 1;
+        msg!(" count: {}", self.counter.no);
+
+        self.counter.exit(&crate::ID)?;
+
+        commit_accounts(
+            &self.payer,
+            vec![&self.counter.to_account_info()],
+            &self.magic_context,
+            &self.magic_program,
+        )?;
+
         Ok(())
     }
-    pub fn commit_account(&mut self) -> Result<()> {
-        // why we give the mut the self where we
-        // updating the value
+
+    /// Manual commit the account in the ER.
+    pub fn commit(&mut self) -> Result<()> {
         commit_accounts(
             &self.payer,
             vec![&self.counter.to_account_info()],
@@ -134,14 +160,30 @@ impl IncrementAndCommit<'_> {
         )?;
         Ok(())
     }
-
-    pub fn exit_rollups(&mut self) -> Result<()> {
+    /// Undelegate the account from the delegation program
+    pub fn undelegate(&mut self) -> Result<()> {
         commit_and_undelegate_accounts(
             &self.payer, // for the commit account and undelegate the payer has to pay the fee
             vec![&self.counter.to_account_info()],
             &self.magic_context,
             &self.magic_program,
         )?;
+        Ok(())
+    }
+
+    /// Increment the counter + manual commit the account in the ER.
+    pub fn increment_and_undelegate(&mut self) -> Result<()> {
+        let counter = &mut self.counter;
+        counter.no += 1;
+        msg!("PDA {} count: {}", counter.key(), counter.no);
+
+        commit_and_undelegate_accounts(
+            &self.payer,
+            vec![&self.counter.to_account_info()],
+            &self.magic_context,
+            &self.magic_program,
+        )?;
+
         Ok(())
     }
 }
