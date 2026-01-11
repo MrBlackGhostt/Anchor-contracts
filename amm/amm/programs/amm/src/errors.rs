@@ -6,4 +6,6 @@ pub enum Error {
     InvalidFee,
     #[msg("Invalid mint id ")]
     InvalidMintId,
+    #[msg("Deposite amount is very low")]
+    DepositeTooSmall,
 }
