@@ -5,8 +5,8 @@ mod errors;
 mod instructions;
 mod state;
 
+pub use errors::*;
 pub use instructions::*;
-
 declare_id!("D4bnsAoKbEFUFi6rJvuH5EVGCrCwTrVsKYLAsZvSq1Ni");
 
 #[program]
@@ -17,7 +17,7 @@ pub mod amm {
         msg!("Greetings from: {:?}", ctx.program_id);
         Ok(())
     }
-    pub fn crate_amm(ctx: Context<CreateAMM>, id: Pubkey, admin: Pubkey, fee: u16) -> Result<()> {
+    pub fn crate_amm(ctx: Context<CreateAmm>, id: Pubkey, admin: Pubkey, fee: u16) -> Result<()> {
         Ok(())
     }
 }

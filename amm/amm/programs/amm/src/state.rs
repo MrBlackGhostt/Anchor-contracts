@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 #[account]
+//Put default unimplemention of the struct with all fields set to their default values
 #[derive(Default)]
 pub struct Amm {
     pub admin: Pubkey,

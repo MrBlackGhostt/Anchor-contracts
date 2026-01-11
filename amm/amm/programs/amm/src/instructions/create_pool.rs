@@ -1,0 +1,64 @@
+use crate::constants::{AUTHORITY_SEED, LIQUIDITY_SEED};
+use crate::errors::Error::{InvalidFee, InvalidMintId};
+use crate::state::{Amm, Pool};
+use anchor_lang::prelude::*;
+
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+
+pub fn crate_pool(ctx: Context<CreatePool>) -> Result<()> {
+let pool = &mut ctx.accounts.pool;
+    pool.amm = ctx.accounts.amm.key();
+    pool.mint_a= ctx.accounts.mint_a.key();
+    pool.mint_b = ctx.accounts.mint_b.key();
+
+    Ok(())
+
+}
+
+#[derive(Accounts)]
+pub struct CreatePool<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    #[account(seeds=[amm.id.as_ref()],bump)]
+    pub amm: Account<'info, Amm>,
+
+     #[account(init,payer=signer, space=Pool::LEN, seeds=[amm.key().as_ref(), mint_a.key().as_ref(), mint_b.key().as_ref()], bump, constraint = mint_a.key() < mint_b.key() @ InvalidMintId )]
+    pub pool: Account<'info, Pool>,
+    //
+    // this work as the authority for the mint_liquidity
+    #[account(seeds=[amm.key().as_ref(), mint_a.key().as_ref(), mint_b.key().as_ref(), AUTHORITY_SEED.as_ref()], bump)]
+    pub pool_authority: AccountInfo<'info>,
+
+  #[account( 
+         init, 
+         payer = signer, 
+         seeds = [ 
+             amm.key().as_ref(), 
+             mint_a.key().as_ref(), 
+             mint_b.key().as_ref(), 
+             LIQUIDITY_SEED.as_ref(), 
+         ], 
+         bump, 
+         mint::decimals = 6, 
+         mint::authority = pool_authority, 
+     )] 
+    pub mint_liquidity: Box<InterfaceAccount<'info,Mint>>,
+
+       pub mint_a: Box<InterfaceAccount<'info, Mint>>,
+
+    pub mint_b: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(init, payer= signer, associated_token::mint= mint_a,associated_token::authority= pool_authority, associated_token::token_program= token_program )]
+    pub pool_account_a: InterfaceAccount<'info, TokenAccount>,
+
+   #[account(init, payer= signer, associated_token::mint= mint_b,associated_token::authority= pool_authority ,associated_token::token_program= token_program)]
+    pub pool_account_b: InterfaceAccount<'info, TokenAccount>,
+
+    pub token_program: Interface<'info, TokenInterface>,
+   
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
+    pub system_program: Program<'info, System>,
+}
