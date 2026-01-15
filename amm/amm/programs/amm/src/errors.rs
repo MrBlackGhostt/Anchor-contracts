@@ -8,4 +8,8 @@ pub enum Error {
     InvalidMintId,
     #[msg("Deposite amount is very low")]
     DepositeTooSmall,
+    #[msg("Deposite amount is too small")]
+    OutputTooSmall,
+    #[msg("Invariant product is invalid")]
+    InvariantViolated,
 }
