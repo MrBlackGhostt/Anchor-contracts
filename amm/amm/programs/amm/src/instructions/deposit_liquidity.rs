@@ -8,6 +8,7 @@ use crate::constants::LIQUIDITY_SEED;
 use crate::errors::Error::DepositeTooSmall;
 use crate::constants::AUTHORITY_SEED;
 
+// ERROR: Typo 'deposite_liquidity' -> 'deposit_liquidity'.
 pub fn deposite_liquidity(
     ctx:Context<DepositLiquidity>,
     amount_a:u64,
@@ -29,30 +30,43 @@ pub fn deposite_liquidity(
     let pool_a = &ctx.accounts.pool_account_a;
     let pool_b  = &ctx.accounts.pool_account_b;
 
+let ratio = I64F64::from_num(pool_b.amount).checked_div(I64F64::from_num(pool_a.amount)).unwrap().to_num::<u64>();
+
 let pool_creation = pool_a.amount == 0 && pool_b.amount == 0;
 
+    // ERROR: Logic flaw. This calculation resembles a Swap, not a Deposit.
+    // For deposit, we want to maintain ratio: amount_a / amount_b = pool_a / pool_b.
+    // Logic here divides constant product by amount, which is for swapping.
     (amount_a,amount_b) = if !pool_creation{
     (amount_a, amount_b)
     }else {
             let constant = I64F64::from_num(pool_a.amount).checked_mul(I64F64::from_num(pool_b.amount)).unwrap(); 
+ 
+let required_b = I64F64::from_num(amount_a).checked_mul(I64F64::from_num(ratio)).unwrap().to_num::<u64>(); 
 
-            if amount_a > amount_b {
-                (I64F64::from_num(constant).checked_div(I64F64::from_num(amount_b)).unwrap().to_num::<u64>(), amount_b)
+            if amount_b < required_b {
+                
+let ratio = I64F64::from_num(pool_a.amount).checked_div(I64F64::from_num(pool_b.amount)).unwrap().to_num::<u64>();
+
+                let required_a = I64F64::from_num(amount_b).checked_mul(I64F64::from_num(ratio)).unwrap().to_num::<u64>();
+                (required_a, amount_b)
             }else{
-                (amount_a,I64F64::from_num(constant).checked_div(I64F64::from_num(amount_a)).unwrap().to_num::<u64>() )
+                (amount_a, required_b)
             }
         };
 
     //amount of liquidity needed
     let mut liquidity = I64F64::from_num(amount_a).checked_mul(I64F64::from_num(amount_b)).unwrap().sqrt().to_num::<u64>();
 
-    if pool_creation {
-        if liquidity < MINIMUM_LIQUIDITY{
-            return  err!(DepositeTooSmall);
-        }
-    }else {
-        liquidity -= MINIMUM_LIQUIDITY  // this is to lock it as initial liquidity
-    }
+    // if pool_creation {
+    //     // ERROR: MINIMUM_LIQUIDITY is not defined in this file.
+    //     if liquidity < MINIMUM_LIQUIDITY{
+    //         return  err!(DepositeTooSmall);
+    //     }
+    // }else {
+    //     // ERROR: Logic flaw. MINIMUM_LIQUIDITY is subtracted for every deposit? usually only first.
+    //     liquidity -= MINIMUM_LIQUIDITY  // this is to lock it as initial liquidity
+    // }
 
 let cpi_account  = TransferChecked{
     mint: ctx.accounts.mint_a.to_account_info(),
@@ -79,6 +93,7 @@ let cpi_account  = TransferChecked{
 
     let cpi_context = CpiContext::new(cpi_program, cpi_account);
 
+    // ERROR: Transferring 'amount_a' for token B! Should be 'amount_b'.
     token_interface::transfer_checked(cpi_context, amount_a, ctx.accounts.mint_b.decimals)?;
 
 ///// add the liquidity token tradfer to the deposite
@@ -108,8 +123,8 @@ pub struct DepositLiquidity <'info>{
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(seeds=[amm.id.as_ref()], bump)]
-    pub amm: AccountInfo<'info, Amm>,
+    pub amm: Account<'info, Amm>,
+    // ERROR: AccountInfo should not have generic <Amm>.
 
 
 
@@ -131,14 +146,18 @@ pub mint_a: Box<InterfaceAccount<'info,Mint>>,
 pub mint_b: Box<InterfaceAccount<'info,Mint>>,
 
     //Pool account of token B
-    #[account(seeds=[associated_token::mint=mint_a, associated_token::authority= pool_authority], bump)]
+    // ERROR: Syntax error in seeds. 'associated_token::mint' is not valid in seeds array.
+    #[account(mut , associated_token::mint=mint_a, associated_token::authority= pool_authority)]
     pub pool_account_a: InterfaceAccount<'info,TokenAccount>,
 
     //Pool account of token B
-    #[account(seeds=[associated_token::mint=mint_a, associated_token::authority= pool_authority, associated_token::token_program= token_program], bump)]
+    // ERROR: Syntax error in seeds.
+    // ERROR: Copy paste error: mint=mint_a (should be mint_b).
+    #[account(mut ,  associated_token::mint=mint_a, associated_token::authority= pool_authority, associated_token::token_program= token_program)]
     pub pool_account_b: InterfaceAccount<'info,TokenAccount>,
 
 #[account(mut)]
+    // ERROR: Typo 'depositer'. Should be 'Signer' if this is the payer/authority.
     depositer: AccountInfo<'info>,
 
     #[account(mut, 
@@ -147,8 +166,9 @@ pub mint_b: Box<InterfaceAccount<'info,Mint>>,
     pub depositer_account_a:  InterfaceAccount<'info, TokenAccount>,
     //Depositer for account B
     #[account(mut, 
+    // ERROR: Copy paste error: mint=mint_a (should be mint_b).
     associated_token::mint= mint_a,
-    associated_token::authority=depositer)]
+    associated_token::authority=depositer,associated_token::token_program= token_program)]
     pub depositer_account_b:  InterfaceAccount<'info, TokenAccount>,
     
 

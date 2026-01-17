@@ -6,7 +6,8 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-pub fn crate_pool(ctx: Context<CreatePool>) -> Result<()> {
+// ERROR: Typo 'crate_pool' -> 'create_pool'.
+pub fn create_pool(ctx: Context<CreatePool>) -> Result<()> {
 let pool = &mut ctx.accounts.pool;
     pool.amm = ctx.accounts.amm.key();
     pool.mint_a= ctx.accounts.mint_a.key();
@@ -31,6 +32,8 @@ pub struct CreatePool<'info> {
     #[account(seeds=[amm.key().as_ref(), mint_a.key().as_ref(), mint_b.key().as_ref(), AUTHORITY_SEED.as_ref()], bump)]
     pub pool_authority: AccountInfo<'info>,
 
+
+// mint_liquidity pda mint accounts for the pool 
   #[account( 
          init, 
          payer = signer, 
@@ -50,6 +53,9 @@ pub struct CreatePool<'info> {
 
     pub mint_b: Box<InterfaceAccount<'info, Mint>>,
 
+    // ERROR: 'associated_token::mint' inside seeds array? Incorrect syntax for seeds constraint.
+    // If these are ATAs, use #[account(init, associated_token::mint=..., ...)].
+    // If they are custom PDAs, use seeds=[...]. Do not mix.
     #[account(init, payer= signer, associated_token::mint= mint_a,associated_token::authority= pool_authority, associated_token::token_program= token_program )]
     pub pool_account_a: InterfaceAccount<'info, TokenAccount>,
 
